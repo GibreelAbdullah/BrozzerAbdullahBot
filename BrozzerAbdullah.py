@@ -3,11 +3,22 @@ import re #for pattern matching
 from services.quranVerseResponse import getQuranVerse  #importing file containg the logic of Quran
 from responseConstants import constants
 import services.generalResponses as responses
+from services.processedItems import get_processed_items, set_processed_items
 
-def run_bot(comment_stream,submission_stream, author):
+def run_bot(comment_list,submission_list, author):
     try:
-        for comment in comment_stream:
-            if (comment is None or comment.author == author):
+
+        processed_comments_submissions = get_processed_items()
+        processed_comments = processed_comments_submissions["c"]
+        processed_submissions = processed_comments_submissions["s"]
+
+        new_processed_comments = []
+        new_processed_submissions = []
+        for comment in comment_list:
+            print(comment)
+            new_processed_comments.append(comment.id)
+            if (comment is None or comment.author == author or comment.id in processed_comments):
+                print('skipping : ' + comment.id)
                 break
             comment_text = comment.body.lower()
             reply_comment = ""
@@ -51,8 +62,12 @@ def run_bot(comment_stream,submission_stream, author):
                 print ("Replying to comment : " + comment.body)
                 reply_comment = reply_comment + constants.footer
                 comment.reply(reply_comment)
-        for submission in submission_stream:
-            if(submission is None):
+
+        for submission in submission_list:
+            print(submission)
+            new_processed_submissions.append(submission.id)
+            if(submission is None or submission.id in processed_submissions):
+                print('skipping : ' + submission.id)
                 break
             submission_text = submission.title.lower() + "------\n" + submission.selftext.lower()
             reply_comment = ""
@@ -74,6 +89,9 @@ def run_bot(comment_stream,submission_stream, author):
                 print ("Replying to comment : " + submission_text)
                 reply_comment = reply_comment + constants.footer
                 submission.reply(reply_comment)
+
+        set_processed_items(new_processed_comments,new_processed_submissions)
+
     except Exception as inst:
         print(type(inst))
         print(inst)
@@ -87,11 +105,12 @@ def run_bot(comment_stream,submission_stream, author):
 if __name__ == "__main__":    
     from services.login import login
     r = login()
-    comment_stream = r.subreddit(constants.subreddits).stream.comments(pause_after=-1,skip_existing=True)
-    submission_stream = r.subreddit(constants.subreddits).stream.submissions(pause_after=-1,skip_existing=True)
+    comments = r.subreddit(constants.subreddits).comments(limit=100)
+    submissions = r.subreddit(constants.subreddits).new(limit=25)
+    # comment_stream = r.subreddit(constants.subreddits).stream.comments(pause_after=-1,skip_existing=True)
+    # submission_stream = r.subreddit(constants.subreddits).stream.submissions(pause_after=-1,skip_existing=True)
     author = r.user.me()
-    while True:
-        run_bot(comment_stream,submission_stream, author)
+    run_bot(comments,submissions, author)
 
 # if __name__ == "__main__":
 #     from responseConstants import localTesting

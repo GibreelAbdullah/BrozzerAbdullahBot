@@ -7,3 +7,6 @@
 .vscode
 alfi.code*
 .env
+services/login.py
+layer.zip
+python/
